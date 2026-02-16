@@ -3,12 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import connectDB from './config/db.js';
+import connectDB from './src/config/db.js';
 import seedAdmin from './seed.js';
-import authRoutes from './routes/auth.js';
-import emailRoutes from './routes/emails.js';
-import visitorRoutes from './routes/visitors.js';
-import { checkBlocked, rateLimiter } from './middleware/rateLimiter.js';
+import authRoutes from './src/routes/auth.js';
+import emailRoutes from './src/routes/emails.js';
+import visitorRoutes from './src/routes/visitors.js';
+import { checkBlocked, rateLimiter } from './src/middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,7 +22,14 @@ const PORT = process.env.PORT || 5000;
 app.set('trust proxy', true);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://rawx.vercel.app',
+        process.env.FRONTEND_URL,
+    ].filter(Boolean),
+    credentials: true,
+}));
 app.use(express.json());
 
 // Security: check blocked IPs + rate limit on all routes
