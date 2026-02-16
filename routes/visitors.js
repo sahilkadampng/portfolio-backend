@@ -1,9 +1,9 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import Visitor from '../models/Visitor.js';
-import BlockedIP from '../models/BlockedIP.js';
-import protect from '../middleware/auth.js';
-import { getClientIP } from '../middleware/rateLimiter.js';
+import Visitor from '../../models/Visitor.js';
+import BlockedIP from '../../models/BlockedIP.js';
+import protect from '../../middleware/auth.js';
+import { getClientIP } from '../../middleware/rateLimiter.js';
 
 const router = express.Router();
 
