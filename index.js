@@ -53,15 +53,25 @@ app.get('/api/health', (req, res) => {
 
 // Connect DB, seed admin, start server
 const start = async () => {
-    await connectDB();
-    await seedAdmin();
+    try {
+        if (!process.env.MONGODB_URI) {
+            console.error('MONGODB_URI is not set. Please configure environment variables.');
+            process.exit(1);
+        }
 
-    app.listen(PORT, () => {
-        console.log(`\n⚡ RAW API Server running on http://localhost:${PORT}`);
-        console.log(`   Health: http://localhost:${PORT}/api/health`);
-        console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login`);
-        console.log(`   Emails: http://localhost:${PORT}/api/emails\n`);
-    });
+        await connectDB();
+        await seedAdmin();
+
+        app.listen(PORT, () => {
+            console.log(`\n⚡ RAW API Server running on http://localhost:${PORT}`);
+            console.log(`   Health: http://localhost:${PORT}/api/health`);
+            console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login`);
+            console.log(`   Emails: http://localhost:${PORT}/api/emails\n`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error.message);
+        process.exit(1);
+    }
 };
 
 start();
