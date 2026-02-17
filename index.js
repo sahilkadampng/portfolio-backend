@@ -8,6 +8,7 @@ import seedAdmin from './seed.js';
 import authRoutes from './src/routes/auth.js';
 import emailRoutes from './src/routes/emails.js';
 import visitorRoutes from './src/routes/visitors.js';
+import donateRoutes from './src/routes/donate.js';
 import { checkBlocked, publicLimiter, authLimiter, adminLimiter } from './src/middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,7 @@ app.use(checkBlocked);
 app.use('/api/auth', authLimiter, authRoutes);           // Auth: 10 req/min (login, sensitive)
 app.use('/api/emails', publicLimiter, emailRoutes);      // Public submissions + admin CRUD
 app.use('/api/visitors', publicLimiter, visitorRoutes);  // Visitor tracking + admin views
+app.use('/api/donate', publicLimiter, donateRoutes);     // Donation / support system
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -47,6 +49,16 @@ app.get('/api/health', (req, res) => {
         message: 'RAW Infrastructure API :: Active',
         version: 'v2.4',
         timestamp: new Date().toISOString(),
+    });
+});
+
+// Global error handler
+app.use((err, req, res, _next) => {
+    const statusCode = err.statusCode || 500;
+    console.error(`[ERROR] ${req.method} ${req.originalUrl} →`, err.message);
+    res.status(statusCode).json({
+        status: 'error',
+        message: statusCode === 500 ? 'Internal server error.' : err.message,
     });
 });
 
