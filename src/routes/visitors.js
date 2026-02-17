@@ -5,6 +5,27 @@ import BlockedIP from '../models/BlockedIP.js';
 import protect from '../middleware/auth.js';
 import { getClientIP } from '../middleware/rateLimiter.js';
 
+// Fetch geolocation data from IP using free ip-api.com
+async function getGeoLocation(ip) {
+    try {
+        if (!ip || ip === 'localhost' || ip === 'unknown') {
+            return { country: 'Unknown', city: 'Unknown', region: 'Unknown' };
+        }
+        const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
+        const data = await res.json();
+        if (data.status === 'success') {
+            return {
+                country: data.country || 'Unknown',
+                city: data.city || 'Unknown',
+                region: data.regionName || 'Unknown',
+            };
+        }
+        return { country: 'Unknown', city: 'Unknown', region: 'Unknown' };
+    } catch {
+        return { country: 'Unknown', city: 'Unknown', region: 'Unknown' };
+    }
+}
+
 const router = express.Router();
 
 const VISITOR_TOKEN_EXPIRY = '30m'; // session lasts 30 minutes
@@ -41,6 +62,9 @@ router.post('/track', async (req, res) => {
             ip = clientIP;
         }
 
+        // Fetch geolocation from IP
+        const geo = await getGeoLocation(ip);
+
         await Visitor.create({
             ip,
             page: page || '/',
@@ -48,6 +72,9 @@ router.post('/track', async (req, res) => {
             device: device || 'Unknown',
             browser: browser || 'Unknown',
             os: os || 'Unknown',
+            country: geo.country,
+            city: geo.city,
+            region: geo.region,
         });
 
         // Generate a visitor session token
@@ -159,6 +186,39 @@ router.delete('/blocked/:id', protect, async (req, res) => {
         res.json({ status: 'success', message: 'Block removed' });
     } catch (err) {
         console.error('Delete block error:', err);
+        res.status(500).json({ status: 'error', message: 'Server error' });
+    }
+});
+
+// POST /api/visitors/block-ip — protected: manually block an IP
+router.post('/block-ip', protect, async (req, res) => {
+    try {
+        const { ip, reason } = req.body;
+        if (!ip) return res.status(400).json({ status: 'error', message: 'IP is required' });
+
+        const existing = await BlockedIP.findOne({ ip });
+        if (existing) {
+            existing.active = true;
+            existing.reason = reason || 'Manually blocked';
+            await existing.save();
+            return res.json({ status: 'success', message: 'IP re-blocked', data: existing });
+        }
+
+        const blocked = await BlockedIP.create({ ip, reason: reason || 'Manually blocked', requestCount: 0 });
+        res.status(201).json({ status: 'success', message: 'IP blocked', data: blocked });
+    } catch (err) {
+        console.error('Manual block error:', err);
+        res.status(500).json({ status: 'error', message: 'Server error' });
+    }
+});
+
+// DELETE /api/visitors/:id — protected: delete a visitor record
+router.delete('/:id', protect, async (req, res) => {
+    try {
+        await Visitor.findByIdAndDelete(req.params.id);
+        res.json({ status: 'success', message: 'Visitor record deleted' });
+    } catch (err) {
+        console.error('Delete visitor error:', err);
         res.status(500).json({ status: 'error', message: 'Server error' });
     }
 });

@@ -1,12 +1,9 @@
+import rateLimit from 'express-rate-limit';
 import BlockedIP from '../models/BlockedIP.js';
 
-// In-memory request counter: { ip: { count, windowStart } }
-const requestCounts = new Map();
-
-const WINDOW_MS = 1000;   // 1 second window
-const MAX_REQUESTS = 15;  // 15 requests per second
-
-// Get real client IP (supports proxies)
+// ──────────────────────────────────────────────
+// Helper: Get the real client IP (supports proxies)
+// ──────────────────────────────────────────────
 export const getClientIP = (req) => {
     return (
         req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
@@ -17,7 +14,10 @@ export const getClientIP = (req) => {
     );
 };
 
-// Middleware: check if IP is blocked
+// ──────────────────────────────────────────────
+// Middleware: Check if the requesting IP is blocked
+// Runs before any rate limiter to immediately deny blocked IPs
+// ──────────────────────────────────────────────
 export const checkBlocked = async (req, res, next) => {
     const ip = getClientIP(req);
 
@@ -37,52 +37,84 @@ export const checkBlocked = async (req, res, next) => {
     next();
 };
 
-// Middleware: rate limiter + auto-block at >15 req/s
-export const rateLimiter = async (req, res, next) => {
-    const ip = getClientIP(req);
-    const now = Date.now();
+// ──────────────────────────────────────────────
+// PUBLIC LIMITER
+// For public endpoints: homepage, visitor tracking, email submission
+// Allows 100 requests per 1-minute window per IP
+// ──────────────────────────────────────────────
+export const publicLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1-minute window
+    max: 100,                   // max 100 requests per window per IP
+    standardHeaders: true,      // Return rate limit info in `RateLimit-*` headers
+    legacyHeaders: false,       // Disable `X-RateLimit-*` headers
+    keyGenerator: (req) => getClientIP(req),  // Use real client IP behind proxies
+    message: {
+        status: 'error',
+        message: 'Too many requests, please try again later.',
+    },
+    handler: (req, res, next, options) => {
+        console.log(`⚠️  Public rate limit hit by IP: ${getClientIP(req)}`);
+        res.status(429).json(options.message);
+    },
+});
 
-    let entry = requestCounts.get(ip);
+// ──────────────────────────────────────────────
+// AUTH LIMITER
+// For sensitive endpoints: login, OTP, password reset
+// Strict limit of 10 requests per 1-minute window per IP
+// Prevents brute-force attacks on authentication
+// ──────────────────────────────────────────────
+export const authLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1-minute window
+    max: 10,                    // max 10 requests per window per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => getClientIP(req),
+    message: {
+        status: 'error',
+        message: 'Too many requests, please try again later.',
+    },
+    handler: async (req, res, next, options) => {
+        const ip = getClientIP(req);
+        console.log(`⛔ Auth rate limit hit by IP: ${ip}`);
 
-    if (!entry || now - entry.windowStart >= WINDOW_MS) {
-        // New window
-        requestCounts.set(ip, { count: 1, windowStart: now });
-        return next();
-    }
-
-    entry.count++;
-
-    if (entry.count > MAX_REQUESTS) {
-        // Auto-block this IP
+        // Auto-block IPs that repeatedly hit the auth limiter
         try {
             const existing = await BlockedIP.findOne({ ip });
             if (!existing) {
                 await BlockedIP.create({
                     ip,
-                    reason: `Rate limit exceeded: ${entry.count} requests in 1 second`,
-                    requestCount: entry.count,
+                    reason: 'Auth rate limit exceeded: too many login attempts',
+                    requestCount: options.max,
                 });
-                console.log(`⛔ Auto-blocked IP: ${ip} (${entry.count} req/s)`);
+                console.log(`⛔ Auto-blocked IP (auth abuse): ${ip}`);
             }
         } catch (err) {
-            console.error('Auto-block error:', err.message);
+            console.error('Auth auto-block error:', err.message);
         }
 
-        return res.status(429).json({
-            status: 'error',
-            message: 'Too many requests. You have been blocked.',
-        });
-    }
+        res.status(429).json(options.message);
+    },
+});
 
-    next();
-};
-
-// Cleanup old entries every 30 seconds
-setInterval(() => {
-    const now = Date.now();
-    for (const [ip, entry] of requestCounts) {
-        if (now - entry.windowStart > 10000) {
-            requestCounts.delete(ip);
-        }
-    }
-}, 30000);
+// ──────────────────────────────────────────────
+// ADMIN LIMITER
+// For admin/protected endpoints: dashboard actions, CRUD operations
+// Allows 20 requests per 1-minute window per IP
+// Prevents abuse of privileged routes even with valid tokens
+// ──────────────────────────────────────────────
+export const adminLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1-minute window
+    max: 20,                    // max 20 requests per window per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => getClientIP(req),
+    message: {
+        status: 'error',
+        message: 'Too many requests, please try again later.',
+    },
+    handler: (req, res, next, options) => {
+        console.log(`⚠️  Admin rate limit hit by IP: ${getClientIP(req)}`);
+        res.status(429).json(options.message);
+    },
+});

@@ -8,7 +8,7 @@ import seedAdmin from './seed.js';
 import authRoutes from './src/routes/auth.js';
 import emailRoutes from './src/routes/emails.js';
 import visitorRoutes from './src/routes/visitors.js';
-import { checkBlocked, rateLimiter } from './src/middleware/rateLimiter.js';
+import { checkBlocked, publicLimiter, authLimiter, adminLimiter } from './src/middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,14 +32,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Security: check blocked IPs + rate limit on all routes
+// Security: check blocked IPs on all routes
 app.use(checkBlocked);
-app.use(rateLimiter);
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/emails', emailRoutes);
-app.use('/api/visitors', visitorRoutes);
+// Routes with endpoint-specific rate limiters
+app.use('/api/auth', authLimiter, authRoutes);           // Auth: 10 req/min (login, sensitive)
+app.use('/api/emails', publicLimiter, emailRoutes);      // Public submissions + admin CRUD
+app.use('/api/visitors', publicLimiter, visitorRoutes);  // Visitor tracking + admin views
 
 // Health check
 app.get('/api/health', (req, res) => {
