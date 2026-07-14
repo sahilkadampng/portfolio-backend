@@ -10,6 +10,8 @@ import emailRoutes from './src/routes/emails.js';
 import visitorRoutes from './src/routes/visitors.js';
 import donateRoutes from './src/routes/donate.js';
 import statsRoutes from './src/routes/stats.js';
+import flagRoutes from './src/routes/flags.js';
+import profileActivityRoutes from './src/routes/profileActivity.js';
 import { checkBlocked, publicLimiter, authLimiter, adminLimiter } from './src/middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +45,8 @@ app.use('/api/emails', publicLimiter, emailRoutes);      // Public submissions +
 app.use('/api/visitors', publicLimiter, visitorRoutes);  // Visitor tracking + admin views
 app.use('/api/donate', publicLimiter, donateRoutes);     // Donation / support system
 app.use('/api/stats', adminLimiter, statsRoutes);        // Admin stats & trends
+app.use('/api/flags', publicLimiter, flagRoutes);        // Feature flags + visibility controls
+app.use('/api/profile-activity', publicLimiter, profileActivityRoutes); // Public social activity widgets
 
 // Health check
 app.get('/api/health', (req, res) => {
