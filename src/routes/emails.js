@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
 
         res.status(201).json({
             status: 'success',
-            message: 'Email received successfully.',
+            message: 'Email submitted successfully.',
             data: { id: newEmail._id, email: newEmail.email },
         });
     } catch (error) {
