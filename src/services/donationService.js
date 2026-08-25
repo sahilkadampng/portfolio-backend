@@ -2,9 +2,9 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import Donation from '../models/Donation.js';
 
-// ──────────────────────────────────────────────
-// Razorpay instance (singleton)
-// ──────────────────────────────────────────────
+
+
+
 let razorpayInstance = null;
 
 function getRazorpay() {
@@ -17,9 +17,9 @@ function getRazorpay() {
     return razorpayInstance;
 }
 
-// ──────────────────────────────────────────────
-// Create Razorpay order + persist donation record
-// ──────────────────────────────────────────────
+
+
+
 export async function createOrder({ amount, name, email, message }) {
     const amountInPaise = Math.round(Number(amount) * 100);
 
@@ -36,7 +36,7 @@ export async function createOrder({ amount, name, email, message }) {
         },
     });
 
-    // Persist donation with "created" status
+    
     await Donation.create({
         name: name || 'Anonymous',
         email: email || undefined,
@@ -55,11 +55,11 @@ export async function createOrder({ amount, name, email, message }) {
     };
 }
 
-// ──────────────────────────────────────────────
-// Verify Razorpay signature + update DB
-// ──────────────────────────────────────────────
+
+
+
 export async function verifyPayment({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
-    // HMAC SHA256 verification
+    
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
     const expectedSignature = crypto
         .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -72,7 +72,7 @@ export async function verifyPayment({ razorpay_order_id, razorpay_payment_id, ra
     );
 
     if (!isValid) {
-        // Mark as failed
+        
         await Donation.findOneAndUpdate(
             { razorpay_order_id },
             { status: 'failed' }
@@ -80,7 +80,7 @@ export async function verifyPayment({ razorpay_order_id, razorpay_payment_id, ra
         throw Object.assign(new Error('Invalid payment signature.'), { statusCode: 400 });
     }
 
-    // Mark as success
+    
     const donation = await Donation.findOneAndUpdate(
         { razorpay_order_id },
         {
@@ -98,9 +98,9 @@ export async function verifyPayment({ razorpay_order_id, razorpay_payment_id, ra
     return donation;
 }
 
-// ──────────────────────────────────────────────
-// Get total donation amount (success only)
-// ──────────────────────────────────────────────
+
+
+
 export async function getTotalDonations() {
     const result = await Donation.aggregate([
         { $match: { status: 'success' } },
@@ -113,9 +113,9 @@ export async function getTotalDonations() {
     };
 }
 
-// ──────────────────────────────────────────────
-// Get recent successful supporters
-// ──────────────────────────────────────────────
+
+
+
 export async function getRecentSupporters(limit = 5) {
     return Donation.find({ status: 'success' })
         .select('name amount createdAt')

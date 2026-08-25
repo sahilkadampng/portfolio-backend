@@ -1,9 +1,9 @@
 import * as donationService from '../services/donationService.js';
 import { validateCreateOrder, validateVerifyPayment } from '../utils/validators.js';
 
-// ──────────────────────────────────────────────
-// POST /api/donate/create-order
-// ──────────────────────────────────────────────
+
+
+
 export const createOrder = async (req, res) => {
     const { amount, name, email, message } = req.body;
 
@@ -20,7 +20,7 @@ export const createOrder = async (req, res) => {
     });
 };
 
-// POST /api/donate/verify
+
 export const verifyPayment = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
@@ -46,7 +46,7 @@ export const verifyPayment = async (req, res) => {
     });
 };
 
-// GET /api/donate/total
+
 export const getTotal = async (_req, res) => {
     const stats = await donationService.getTotalDonations();
 
@@ -57,7 +57,7 @@ export const getTotal = async (_req, res) => {
 };
 
 
-// GET /api/donate/recent
+
 export const getRecent = async (_req, res) => {
     const supporters = await donationService.getRecentSupporters(5);
 

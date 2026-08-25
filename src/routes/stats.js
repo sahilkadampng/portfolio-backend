@@ -6,7 +6,7 @@ import protect from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/stats/overview — protected: Get global numbers
+
 router.get('/overview', protect, async (req, res) => {
     try {
         const [
@@ -37,7 +37,7 @@ router.get('/overview', protect, async (req, res) => {
     }
 });
 
-// GET /api/stats/trends — protected: Get 15-day activity trends
+
 router.get('/trends', protect, async (req, res) => {
     try {
         const fifteenDaysAgo = new Date();
@@ -67,7 +67,7 @@ router.get('/trends', protect, async (req, res) => {
             ])
         ]);
 
-        // Helper to fill missing dates with 0
+        
         const fillDates = (data) => {
             const map = new Map(data.map(item => [item._id, item.count]));
             const result = [];
@@ -93,7 +93,7 @@ router.get('/trends', protect, async (req, res) => {
     }
 });
 
-// GET /api/stats/activity — protected: Recent chronological activity
+
 router.get('/activity', protect, async (req, res) => {
     try {
         const [recentVisitors, recentEmails] = await Promise.all([

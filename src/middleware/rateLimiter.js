@@ -1,9 +1,9 @@
 import rateLimit from 'express-rate-limit';
 import BlockedIP from '../models/BlockedIP.js';
 
-// ──────────────────────────────────────────────
-// Helper: Get the real client IP (supports proxies)
-// ──────────────────────────────────────────────
+
+
+
 export const getClientIP = (req) => {
     return (
         req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
@@ -14,10 +14,10 @@ export const getClientIP = (req) => {
     );
 };
 
-// ──────────────────────────────────────────────
-// Middleware: Check if the requesting IP is blocked
-// Runs before any rate limiter to immediately deny blocked IPs
-// ──────────────────────────────────────────────
+
+
+
+
 export const checkBlocked = async (req, res, next) => {
     const ip = getClientIP(req);
 
@@ -37,17 +37,17 @@ export const checkBlocked = async (req, res, next) => {
     next();
 };
 
-// ──────────────────────────────────────────────
-// PUBLIC LIMITER
-// For public endpoints: homepage, visitor tracking, email submission
-// Allows 100 requests per 1-minute window per IP
-// ──────────────────────────────────────────────
+
+
+
+
+
 export const publicLimiter = rateLimit({
-    windowMs: 60 * 1000,       // 1-minute window
-    max: 100,                   // max 100 requests per window per IP
-    standardHeaders: true,      // Return rate limit info in `RateLimit-*` headers
-    legacyHeaders: false,       // Disable `X-RateLimit-*` headers
-    keyGenerator: (req) => getClientIP(req),  // Use real client IP behind proxies
+    windowMs: 60 * 1000,       
+    max: 100,                   
+    standardHeaders: true,      
+    legacyHeaders: false,       
+    keyGenerator: (req) => getClientIP(req),  
     message: {
         status: 'error',
         message: 'Too many requests, please try again later.',
@@ -58,12 +58,12 @@ export const publicLimiter = rateLimit({
     },
 });
 
-// ──────────────────────────────────────────────
-// AUTH LIMITER
-// For sensitive endpoints: login, OTP, password reset
-// Strict limit of 10 requests per 1-minute window per IP
-// Prevents brute-force attacks on authentication
-// ──────────────────────────────────────────────
+
+
+
+
+
+
 export const authLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1-minute window
     max: 10,                    // max 10 requests per window per IP
@@ -78,7 +78,7 @@ export const authLimiter = rateLimit({
         const ip = getClientIP(req);
         console.log(`⛔ Auth rate limit hit by IP: ${ip}`);
 
-        // Auto-block IPs that repeatedly hit the auth limiter
+        
         try {
             const existing = await BlockedIP.findOne({ ip });
             if (!existing) {
@@ -97,12 +97,12 @@ export const authLimiter = rateLimit({
     },
 });
 
-// ──────────────────────────────────────────────
-// ADMIN LIMITER
-// For admin/protected endpoints: dashboard actions, CRUD operations
-// Allows 20 requests per 1-minute window per IP
-// Prevents abuse of privileged routes even with valid tokens
-// ──────────────────────────────────────────────
+
+
+
+
+
+
 export const adminLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1-minute window
     max: 20,                    // max 20 requests per window per IP

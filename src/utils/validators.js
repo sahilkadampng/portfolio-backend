@@ -1,7 +1,4 @@
-/**
- * Validate donation create-order request body.
- * Returns { valid: true } or { valid: false, message: string }.
- */
+
 export function validateCreateOrder({ amount }) {
     if (amount === undefined || amount === null) {
         return { valid: false, message: 'Amount is required.' };
@@ -24,9 +21,8 @@ export function validateCreateOrder({ amount }) {
     return { valid: true };
 }
 
-/**
- * Validate verify payment request body.
- */
+
+
 export function validateVerifyPayment({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return {

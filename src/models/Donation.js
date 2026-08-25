@@ -53,7 +53,7 @@ const donationSchema = new mongoose.Schema(
     }
 );
 
-// Index for analytics queries
+
 donationSchema.index({ status: 1, createdAt: -1 });
 
 const Donation = mongoose.model('Donation', donationSchema);

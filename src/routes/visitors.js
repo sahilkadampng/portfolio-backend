@@ -5,7 +5,7 @@ import BlockedIP from '../models/BlockedIP.js';
 import protect from '../middleware/auth.js';
 import { getClientIP } from '../middleware/rateLimiter.js';
 
-// Fetch geolocation data from IP using free ip-api.com
+
 async function getGeoLocation(ip) {
     try {
         if (!ip || ip === 'localhost' || ip === 'unknown') {
@@ -28,41 +28,41 @@ async function getGeoLocation(ip) {
 
 const router = express.Router();
 
-const VISITOR_TOKEN_EXPIRY = '30m'; // session lasts 30 minutes
+const VISITOR_TOKEN_EXPIRY = '30m'; 
 
-// Normalize localhost IPs
+
 const normalizeIP = (ip) => {
     if (!ip || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === '127.0.0.1') {
         return 'localhost';
     }
-    // Strip ::ffff: prefix from IPv4-mapped IPv6
+    
     if (ip.startsWith('::ffff:')) return ip.slice(7);
     return ip;
 };
 
-// POST /api/visitors/track — public: track a visitor
+
 router.post('/track', async (req, res) => {
     try {
         const { page, referrer, device, browser, os, visitorToken, clientIP } = req.body;
 
-        // Check if visitor already has a valid (non-expired) token
+        
         if (visitorToken) {
             try {
                 jwt.verify(visitorToken, process.env.JWT_SECRET);
-                // Token still valid — don't count as new visit
+                
                 return res.json({ status: 'success', newVisit: false, token: visitorToken });
             } catch {
                 // Token expired or invalid — fall through to create new visit
             }
         }
 
-        // Get IP: prefer client-sent public IP, fallback to server-detected
+        
         let ip = normalizeIP(getClientIP(req));
         if (clientIP && clientIP !== 'unknown' && clientIP !== 'localhost') {
             ip = clientIP;
         }
 
-        // Fetch geolocation from IP
+        
         const geo = await getGeoLocation(ip);
 
         await Visitor.create({
@@ -77,7 +77,7 @@ router.post('/track', async (req, res) => {
             region: geo.region,
         });
 
-        // Generate a visitor session token
+        
         const token = jwt.sign(
             { ip, tracked: true },
             process.env.JWT_SECRET,
@@ -91,7 +91,7 @@ router.post('/track', async (req, res) => {
     }
 });
 
-// GET /api/visitors — protected: list visitors
+
 router.get('/', protect, async (req, res) => {
     try {
         const { page = 1, limit = 20, search, startDate, endDate } = req.query;
@@ -104,7 +104,7 @@ router.get('/', protect, async (req, res) => {
             ];
         }
 
-        // Date range filtering
+        
         if (startDate || endDate) {
             query.createdAt = {};
             if (startDate) query.createdAt.$gte = new Date(startDate);
@@ -122,7 +122,7 @@ router.get('/', protect, async (req, res) => {
             Visitor.countDocuments(query),
         ]);
 
-        // Stats (respecting date query for 'today' and totals if needed, but keeping global unique count)
+        
         const totalVisitors = await Visitor.countDocuments(query);
         const uniqueIPs = await Visitor.distinct('ip', query);
 
@@ -151,7 +151,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// GET /api/visitors/export — protected: export visitors as CSV
+
 router.get('/export', protect, async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
@@ -203,7 +203,7 @@ router.get('/export', protect, async (req, res) => {
     }
 });
 
-// GET /api/visitors/blocked — protected: list blocked IPs
+
 router.get('/blocked', protect, async (req, res) => {
     try {
         const blocked = await BlockedIP.find().sort('-createdAt');
@@ -221,7 +221,7 @@ router.get('/blocked', protect, async (req, res) => {
     }
 });
 
-// PATCH /api/visitors/blocked/:id — protected: toggle block status
+
 router.patch('/blocked/:id', protect, async (req, res) => {
     try {
         const entry = await BlockedIP.findById(req.params.id);
@@ -243,7 +243,7 @@ router.patch('/blocked/:id', protect, async (req, res) => {
     }
 });
 
-// DELETE /api/visitors/blocked/:id — protected: remove block
+
 router.delete('/blocked/:id', protect, async (req, res) => {
     try {
         await BlockedIP.findByIdAndDelete(req.params.id);
@@ -254,7 +254,7 @@ router.delete('/blocked/:id', protect, async (req, res) => {
     }
 });
 
-// POST /api/visitors/block-ip — protected: manually block an IP
+
 router.post('/block-ip', protect, async (req, res) => {
     try {
         const { ip, reason } = req.body;
@@ -276,7 +276,7 @@ router.post('/block-ip', protect, async (req, res) => {
     }
 });
 
-// DELETE /api/visitors/:id — protected: delete a visitor record
+
 router.delete('/:id', protect, async (req, res) => {
     try {
         await Visitor.findByIdAndDelete(req.params.id);

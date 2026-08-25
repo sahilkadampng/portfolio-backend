@@ -4,7 +4,7 @@ import protect from '../middleware/auth.js';
 
 const router = express.Router();
 
-// POST /api/emails — public: submit email from CTA
+
 router.post('/', async (req, res) => {
     try {
         const { email, source } = req.body;
@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Check if email already exists
+        
         const existing = await Email.findOne({ email: email.toLowerCase() });
         if (existing) {
             return res.json({
@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /api/emails — protected: list all emails (admin)
+
 router.get('/', protect, async (req, res) => {
     try {
         const { page = 1, limit = 20, status, search, sort = '-createdAt', startDate, endDate } = req.query;
@@ -64,7 +64,7 @@ router.get('/', protect, async (req, res) => {
             query.email = { $regex: search, $options: 'i' };
         }
 
-        // Date range filtering
+        
         if (startDate || endDate) {
             query.createdAt = {};
             if (startDate) query.createdAt.$gte = new Date(startDate);
@@ -82,7 +82,7 @@ router.get('/', protect, async (req, res) => {
             Email.countDocuments(query),
         ]);
 
-        // Stats calculation based on provided filters (except pagination)
+        
         const [totalCount, newCount, contactedCount, archivedCount] = await Promise.all([
             Email.countDocuments(query),
             Email.countDocuments({ ...query, status: 'new' }),
@@ -115,7 +115,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// GET /api/emails/export — protected: export emails as CSV
+
 router.get('/export', protect, async (req, res) => {
     try {
         const { status, search, startDate, endDate } = req.query;
@@ -135,7 +135,7 @@ router.get('/export', protect, async (req, res) => {
 
         const emails = await Email.find(query).sort('-createdAt');
 
-        // Simple CSV generation
+        
         const headers = ['ID', 'Email', 'Source', 'Status', 'Date'];
         const rows = emails.map(e => [
             e._id,
@@ -159,7 +159,7 @@ router.get('/export', protect, async (req, res) => {
     }
 });
 
-// PATCH /api/emails/:id — protected: update email status
+
 router.patch('/:id', protect, async (req, res) => {
     try {
         const { status } = req.body;
@@ -197,7 +197,7 @@ router.patch('/:id', protect, async (req, res) => {
     }
 });
 
-// DELETE /api/emails/:id — protected: delete email
+
 router.delete('/:id', protect, async (req, res) => {
     try {
         const email = await Email.findByIdAndDelete(req.params.id);
